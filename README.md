@@ -24,7 +24,7 @@ Hace falta Python 3.12 o superior. `tzdata` se instala sola si Windows no trae l
 
 ## Vercel
 
-El repositorio ya trae `app.py`, `requirements.txt` y `.python-version`. La web estática está en `public/` y la sirve la CDN. La API es Flask: Vercel carga `app.py` sin archivo de configuración. No hace falta `vercel.json`. Un bloque `functions` sobre `app.py` en la raíz falla el build, porque ese patrón solo vale para archivos dentro de `api/`.
+El repositorio ya trae `app.py`, `requirements.txt`, `.python-version` y `pyproject.toml`. La web estática está en `public/` y la sirve la CDN. La API es Flask. `vercel.json` fija el marco en Flask: sin eso, un proyecto importado como sitio estático publica la portada y responde 404 en `/api`. No pongas `functions` sobre `app.py`: ese patrón solo vale cuando la función ya existe, y en un proyecto estático rompe el build.
 
 1. En Vercel, importa `InversorIbex/investmentapp`.
 2. El marco es Flask. No hace falta comando de build ni variables de entorno.

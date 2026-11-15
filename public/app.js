@@ -123,8 +123,17 @@ function tdNum(html) { return `<td class="num">${html}</td>`; }
 
 async function api(path) {
   const response = await fetch(path);
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.error || "No se pudo cargar");
+  const text = await response.text();
+  let data = {};
+  try {
+    data = text ? JSON.parse(text) : {};
+  } catch {
+    data = {};
+  }
+  if (!response.ok) {
+    const detail = typeof data.error === "string" ? data.error : text.replace(/\s+/g, " ").trim();
+    throw new Error(detail.slice(0, 180) || "No se pudo cargar");
+  }
   return data;
 }
 function loading(text) {
