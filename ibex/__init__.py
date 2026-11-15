@@ -1,0 +1,1 @@
+"""Terminal local Inversor Íbex."""

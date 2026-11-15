@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inversor Íbex</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,520;9..144,640&family=Outfit:wght@360;480;580&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/app.css">
+</head>
+<body>
+<div class="shell">
+  <aside class="side">
+    <a class="brand" href="#hoy">Inversor <em>Íbex</em><small>Para el particular</small></a>
+    <nav id="nav">
+      <a href="#hoy" data-route="hoy">Hoy</a>
+      <a href="#indices" data-route="indices">Índices</a>
+      <a href="#screener" data-route="screener">Screener</a>
+      <a href="#gangas" data-route="gangas">Gangas</a>
+      <a href="#calidad" data-route="calidad">Calidad</a>
+      <a href="#dividendos" data-route="dividendos">Dividendos</a>
+      <a href="#termometro" data-route="termometro">Termómetro</a>
+      <a href="#noticias" data-route="noticias">Noticias</a>
+      <a href="#resultados" data-route="resultados">Resultados</a>
+      <a href="#sentimiento" data-route="sentimiento">Sentimiento</a>
+      <a href="#cartera" data-route="cartera">Cartera modelo</a>
+    </nav>
+    <p class="fine">Cotizaciones diferidas. Nada de lo que ves es una recomendación de inversión.</p>
+  </aside>
+  <div class="work">
+    <header class="top">
+      <form id="search" autocomplete="off">
+        <label class="sr" for="q">Buscar</label>
+        <input id="q" type="search" placeholder="Buscar empresa, ticker, IBEX, Nestlé…" enterkeyhint="search">
+        <div id="suggest" class="suggest" hidden></div>
+      </form>
+      <p id="clock" class="clock"></p>
+    </header>
+    <main id="view"></main>
+  </div>
+</div>
+<script src="/app.js"></script>
+</body>
+</html>
