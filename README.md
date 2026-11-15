@@ -24,13 +24,13 @@ Hace falta Python 3.12 o superior. `tzdata` se instala sola si Windows no trae l
 
 ## Vercel
 
-El repositorio ya trae `app.py`, `requirements.txt`, `.python-version` y `vercel.json`. La web estática está en `public/` y la sirve la CDN. La API es una función Flask.
+El repositorio ya trae `app.py`, `requirements.txt` y `.python-version`. La web estática está en `public/` y la sirve la CDN. La API es Flask: Vercel carga `app.py` sin archivo de configuración. No hace falta `vercel.json`. Un bloque `functions` sobre `app.py` en la raíz falla el build, porque ese patrón solo vale para archivos dentro de `api/`.
 
 1. En Vercel, importa `InversorIbex/investmentapp`.
 2. El marco es Flask. No hace falta comando de build ni variables de entorno.
 3. Despliega.
 
-La primera visita a Gangas o a Hoy puede tardar, porque baja datos de Yahoo y de la SEC. El tope de la función es 300 segundos. La caché y la cartera de papel en Vercel viven en el disco temporal de la función: se vacían cuando Vercel recicla la instancia. En este ordenador la cartera sigue en `data/portfolio.json`.
+La primera visita a Gangas o a Hoy puede tardar, porque baja datos de Yahoo y de la SEC. El tope por defecto de la función es 300 segundos. La caché y la cartera de papel en Vercel viven en el disco temporal de la función: se vacían cuando Vercel recicla la instancia. En este ordenador la cartera sigue en `data/portfolio.json`.
 
 ## Qué hay en cada apartado
 
