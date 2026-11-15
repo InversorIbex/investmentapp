@@ -70,22 +70,53 @@ function spark(values, width = 92, height = 28) {
   const up = pts[pts.length - 1] >= pts[0];
   return `<svg class="spark" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" aria-hidden="true"><polyline fill="none" stroke="${up ? "#1d6b45" : "#9d342c"}" stroke-width="1.6" points="${d}"></polyline></svg>`;
 }
-function lineChart(curve) {
-  if (!curve || curve.length < 2) return "<p class='meta'>La curva aparece a partir del segundo día.</p>";
-  const w = 640;
-  const h = 220;
-  const keys = [["portfolio", "#9a4e2c"], ["blend", "#1c1712"]];
-  const all = curve.flatMap((p) => [p.portfolio, p.blend]).filter((v) => typeof v === "number");
-  const min = Math.min(...all);
-  const max = Math.max(...all);
-  const span = max - min || 1;
-  const x = (i) => (i / (curve.length - 1)) * (w - 16) + 8;
-  const y = (v) => h - 16 - ((v - min) / span) * (h - 32);
-  const paths = keys.map(([key, color]) => {
-    const d = curve.map((p, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(p[key]).toFixed(1)}`).join(" ");
-    return `<path d="${d}" fill="none" stroke="${color}" stroke-width="2.2"></path>`;
+function growthChart(curve) {
+  const pts = (curve || []).filter((p) => typeof p.portfolio === "number");
+  if (!pts.length) return "<p class='meta'>Todavía no hay un cierre apuntado.</p>";
+  const w = 680;
+  const h = 250;
+  const left = 42;
+  const right = 12;
+  const top = 16;
+  const bottom = 28;
+  const values = pts.flatMap((p) => [p.portfolio, p.blend]).filter((v) => typeof v === "number");
+  values.push(100);
+  let lo = Math.min(...values);
+  let hi = Math.max(...values);
+  if (hi - lo < 0.8) {
+    lo -= 0.6;
+    hi += 0.6;
+  } else {
+    const pad = (hi - lo) * 0.12;
+    lo -= pad;
+    hi += pad;
+  }
+  const span = hi - lo || 1;
+  const x = (i) => (pts.length === 1 ? (left + w - right) / 2 : left + (i / (pts.length - 1)) * (w - left - right));
+  const y = (v) => top + (1 - (v - lo) / span) * (h - top - bottom);
+  const pathFor = (key) => pts.map((p, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(p[key]).toFixed(1)}`).join(" ");
+  const yTicks = [lo, 100, hi].filter((v, i, all) => all.findIndex((n) => Math.abs(n - v) < span * 0.08) === i);
+  const grid = yTicks.map((v) => {
+    const yy = y(v);
+    return `<line x1="${left}" y1="${yy.toFixed(1)}" x2="${w - right}" y2="${yy.toFixed(1)}" stroke="#e3d9c8" stroke-width="1"></line><text x="${left - 6}" y="${(yy + 4).toFixed(1)}" text-anchor="end" fill="#6e655b" font-size="11">${v.toFixed(v >= 100 ? 1 : 1)}</text>`;
   }).join("");
-  return `<div class="chart-wrap"><svg viewBox="0 0 ${w} ${h}" role="img" aria-label="Cartera frente a la referencia">${paths}</svg><p class="meta"><span class="up">Cobre: cartera</span> · Negro: 50% S&P 500, 30% Euro Stoxx 50, 20% TSX, en euros. Base 100 el día de salida.</p></div>`;
+  const dots = pts.map((p, i) => `<circle cx="${x(i).toFixed(1)}" cy="${y(p.portfolio).toFixed(1)}" r="3.5" fill="#9a4e2c"></circle>`).join("");
+  const blend = pts.length > 1 ? `<path d="${pathFor("blend")}" fill="none" stroke="#1c1712" stroke-width="1.6" stroke-dasharray="4 3"></path>` : "";
+  const line = pts.length > 1 ? `<path d="${pathFor("portfolio")}" fill="none" stroke="#9a4e2c" stroke-width="2.4"></path>` : "";
+  const first = pts[0];
+  const last = pts[pts.length - 1];
+  const dates = `<text x="${x(0).toFixed(1)}" y="${h - 8}" text-anchor="${pts.length === 1 ? "middle" : "start"}" fill="#6e655b" font-size="11">${esc(first.date)}</text>`
+    + (pts.length > 1 ? `<text x="${x(pts.length - 1).toFixed(1)}" y="${h - 8}" text-anchor="end" fill="#6e655b" font-size="11">${esc(last.date)}</text>` : "");
+  const labelX = x(pts.length - 1);
+  const labelAnchor = labelX > w - 72 ? "end" : "start";
+  const lastLabel = `<text x="${(labelAnchor === "end" ? labelX - 8 : labelX + 8).toFixed(1)}" y="${(y(last.portfolio) - 8).toFixed(1)}" text-anchor="${labelAnchor}" fill="#9a4e2c" font-size="12">${num(last.portfolio, 1)}</text>`;
+  return `<div class="chart-wrap"><svg viewBox="0 0 ${w} ${h}" role="img" aria-label="Crecimiento de la cartera, base 100">${grid}${blend}${line}${dots}${dates}${lastLabel}</svg><p class="meta">Cobre: la cartera, base 100 el día de salida. Línea discontinua: 50% S&P 500, 30% Euro Stoxx 50 y 20% TSX, en euros. Cada día de Madrid en que se abre Hoy o Cartera se añade un punto. El último vale ${nf0.format(last.value_eur)} € (${pct(last.day_pct)} ese día).</p></div>`;
+}
+function tradeRows(trades) {
+  if (!trades || !trades.length) return "<p class='meta'>Todavía no hay compras ni ventas apuntadas.</p>";
+  return `<table><thead>${th(["Fecha", "Operación", "Empresa", "Precio*", "Importe €*"])}</thead><tbody>
+    ${trades.map((row) => `<tr class="clickable" data-symbol="${esc(row.symbol)}"><td>${esc(row.date)}</td><td class="${row.side === "venta" ? "side-sell" : "side-buy"}">${row.side === "venta" ? "Venta" : "Compra"}</td><td><div class="name">${esc(row.name)}</div><div class="sym">${esc(row.symbol)}${row.shares ? " · " + num(row.shares, row.shares >= 1 ? 2 : 4) + " títulos" : ""}</div></td>${tdNum(row.price == null ? "—" : num(row.price) + (row.currency ? " " + esc(row.currency) : ""))}${tdNum(nf0.format(row.value_eur || 0))}</tr>`).join("")}
+  </tbody></table>`;
 }
 function area(points) {
   const pts = (points || []).filter((p) => p && typeof p.c === "number");
@@ -409,7 +440,15 @@ async function renderCartera() {
       <article class="card stat"><div class="label">Cartera, base 100</div><div class="value">${num(data.portfolio_index, 1)}</div></article>
       <article class="card stat"><div class="label">Frente a la referencia</div><div class="value">${pct(data.vs_blend, 1)}</div><div class="sub">referencia ${num(data.blend_index, 1)}</div></article>
     </div>
-    <section class="card" style="margin:14px 0">${lineChart(data.curve)}</section>
+    <section class="card" style="margin:14px 0">
+      <h2>Crecimiento</h2>
+      ${growthChart(data.curve)}
+    </section>
+    <section class="card" style="margin-bottom:14px">
+      <h2>Compras y ventas</h2>
+      <p class="meta">La lista la escribe el propio programa, no una persona ni un modelo. Un día laborable, como mucho una venta y su compra.</p>
+      ${tradeRows(data.trades)}
+    </section>
     <section class="card"><table><thead>${th(["Empresa", "Peso*", "Precio*", "Hoy*", "Desde la compra*", "Nota*", "Valor €*"])}</thead><tbody>
       ${(data.holdings || []).map((row) => `<tr class="clickable" data-symbol="${esc(row.symbol)}"><td><div class="name">${esc(row.name)}</div><div class="sym">${esc(row.symbol)} · ${esc(row.region_label || "")} · ${esc(row.sector_label || "")}</div></td>${tdNum(num(row.weight, 1) + "%")}${tdNum(num(row.price))}${tdNum(pct(row.change_pct))}${tdNum(pct(row.gain_pct, 1))}${tdNum(num(row.score, 0))}${tdNum(nf0.format(row.value_eur || 0))}</tr>`).join("")}
     </tbody></table></section>

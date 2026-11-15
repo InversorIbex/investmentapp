@@ -176,6 +176,50 @@ def _select(rows: list[dict]) -> list[dict]:
     return picked[:10]
 
 
+def _trade(date: str, side: str, symbol: str, name: str, shares: float, price: float, currency: str, value_eur: float) -> dict:
+    return {
+        "date": date,
+        "side": side,
+        "symbol": symbol,
+        "name": name,
+        "shares": round(float(shares), 4),
+        "price": None if price is None else round(float(price), 4),
+        "currency": currency,
+        "value_eur": round(float(value_eur), 2),
+    }
+
+
+def _trades_from_holdings(date: str, holdings: list[dict]) -> list[dict]:
+    return [
+        _trade(
+            date,
+            "compra",
+            item["symbol"],
+            item.get("name") or item["symbol"],
+            item.get("shares") or 0,
+            item.get("entry_price") or 0,
+            item.get("currency") or "",
+            item.get("cost_eur") or 0,
+        )
+        for item in holdings
+    ]
+
+
+def _ensure_trades(book: dict) -> None:
+    if book.get("trades"):
+        return
+    changed = any(row.get("action") == "cambiar" for row in book.get("decisions") or [])
+    if changed:
+        book["trades"] = []
+        return
+    opened = book.get("inception")
+    for row in book.get("decisions") or []:
+        if row.get("action") == "abrir":
+            opened = row["date"]
+            break
+    book["trades"] = _trades_from_holdings(opened, book.get("holdings") or [])
+
+
 def _holding_from(row: dict, eur: float, fx: dict[str, float], quote: dict) -> dict:
     shares = _shares_for(eur, quote["price"], quote["currency"], fx)
     return {
@@ -330,6 +374,12 @@ def _decide(book: dict, universe: list[dict], fear: dict, quotes: dict[str, dict
         newbie = _holding_from(outsider, proceeds, fx, outsider_quote)
         book["holdings"] = [item for item in book["holdings"] if item["symbol"] != worst["symbol"]]
         book["holdings"].append(newbie)
+        book.setdefault("trades", []).append(
+            _trade(today, "venta", worst["symbol"], worst["name"], worst.get("shares") or 0, quote["price"], quote["currency"], proceeds)
+        )
+        book["trades"].append(
+            _trade(today, "compra", newbie["symbol"], newbie["name"], newbie["shares"], newbie["entry_price"], newbie["currency"], proceeds)
+        )
         decision = {
             "date": today,
             "action": "cambiar",
@@ -402,6 +452,7 @@ def _open_book(rows: list[dict], quotes: dict[str, dict], fx: dict[str, float]) 
         ],
         "curve": [],
         "benchmark_eur": base,
+        "trades": _trades_from_holdings(today, holdings),
     }
     return book, quotes
 
@@ -421,6 +472,7 @@ def view() -> dict:
             fear = fear_greed()
         except Exception as exc:  # noqa: BLE001
             fear = {"score": None, "label": "sin dato", "error": str(exc)}
+        _ensure_trades(book)
         decision = _decide(book, rows, fear, quotes, fx)
         marked = _mark(book, quotes, fx)
         book["updated"] = datetime.now(timezone.utc).isoformat()
@@ -445,6 +497,8 @@ def view() -> dict:
             "blend_index": point["blend"],
             "vs_blend": round(point["portfolio"] - point["blend"], 2),
             "decision": decision,
+            "trades": list(reversed(book.get("trades") or [])),
+            "decisions": list(reversed(book.get("decisions") or [])),
             "fear": {"score": fear.get("score"), "label": fear.get("label")},
             "holdings": marked["lines"],
             "curve": book["curve"][-180:],

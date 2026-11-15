@@ -135,9 +135,7 @@ class Handler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         path = unquote(parsed.path)
         if path == "/favicon.ico":
-            self.send_response(204)
-            self.end_headers()
-            return
+            path = "/favicon.svg"
         try:
             if path.startswith("/api/"):
                 self._api(path, parse_qs(parsed.query))
